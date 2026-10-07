@@ -10,6 +10,7 @@ Source: blueprint v0.1 ch.25–26 (verbatim logic, reformatted as checklist).
 - [x] Shader sketches (`packages/shaders/`)
 - [x] Offline playground (`examples/playground.html`)
 - [x] 3 demos: button-tension, card-drape, overlay-organza (`examples/demo-*.html`, vision-verified)
+- [x] ClothLab interactive press/drag demo (`examples/demo-cloth-press-drag.html`, scripted-pointer QA)
 - [x] Design spec v0.1 in M3/HIG format (`docs/design-spec.md`)
 - [ ] Open first batch of GitHub Issues (see docs/research.md ch.26)
 

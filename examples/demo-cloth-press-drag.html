@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Demo 04 · 按压凹陷 + 拖拽拉扯</title>
+<style>
+  :root{--bg:#161310;--panel:#211d17;--ink:#f2ece1;--mut:#b9ae9c;--gold:#c79943;--line:#3a342a}
+  *{box-sizing:border-box}
+  body{font-family:system-ui,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);margin:0;padding:32px 20px}
+  .wrap{max-width:900px;margin:0 auto}
+  .kicker{color:var(--gold);font-size:12px;letter-spacing:.25em}
+  h1{font-family:Georgia,serif;font-weight:400;margin:.3em 0}
+  h1 b{color:var(--gold);font-weight:400}
+  .lede{color:var(--mut);font-size:14px;line-height:1.9;max-width:640px}
+  .mats{display:flex;gap:10px;margin:18px 0}
+  .mats button{flex:1;background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:10px;font-size:14px;cursor:pointer}
+  .mats button.on{border-color:var(--gold);color:var(--gold)}
+  .mats button small{display:block;color:var(--mut);font-size:11px;margin-top:4px}
+  #stage{position:relative;border:1px solid var(--line);border-radius:18px;overflow:hidden;touch-action:none;cursor:grab}
+  #stage:active{cursor:grabbing}
+  #cloth{display:block;width:100%;height:auto}
+  #copy{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;pointer-events:none;padding:24px}
+  #copy .tag{color:var(--gold);font-size:12px;letter-spacing:.3em}
+  #copy h2{font-family:Georgia,serif;font-weight:400;font-size:30px;margin:.4em 0;text-shadow:0 2px 14px rgba(0,0,0,.7)}
+  #copy p{color:#efe7d8;font-size:14px;line-height:1.9;max-width:520px;text-shadow:0 1px 10px rgba(0,0,0,.8)}
+  .hint{color:var(--mut);font-size:13px;margin-top:12px;line-height:1.8}
+  .hint b{color:var(--gold)}
+  table{width:100%;border-collapse:collapse;margin-top:22px;font-size:13px;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  th{color:var(--gold);text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);font-weight:600}
+  td{padding:10px 14px;border-bottom:1px solid var(--line);color:var(--mut);line-height:1.7}
+  td:first-child{color:var(--ink);white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="kicker">TEXTURE DESIGN · DEMO 04</div>
+  <h1>ClothLab <b>按压与拖拽</b></h1>
+  <p class="lede">这块面板就是一块布。按住不放：布在你指尖下凹陷，出现张力环；按住拖动：布被拽走，
+  松手后按面料自己的脾气回弹 —— 丝漾起涟漪，牛仔沉一下就停，棉在中间。
+  路线来自蓝本 §3.5 html-to-cloth（语义 DOM 与纺织层分离：上面这段文字是普通 DOM，关掉 Canvas 照样可读）
+  与 §3.6 Holocloth（实时布料解算），代码全部自写。</p>
+  <div class="mats">
+    <button data-m="cotton" class="on">棉 · Cotton<small>中性回弹</small></button>
+    <button data-m="denim">牛仔 · Denim<small>硬挺，沉而不漾</small></button>
+    <button data-m="silk">丝 · Silk<small>轻，涟漪走得远</small></button>
+  </div>
+  <div id="stage">
+    <canvas id="cloth" width="880" height="520"></canvas>
+    <div id="copy">
+      <div class="tag">COMMUNITY SCREENING</div>
+      <h2>今晚的社区放映</h2>
+      <p>露天银幕 · 19:30 · 中心广场<br>按住这块布试试 —— 它记得你的手指来过。</p>
+    </div>
+  </div>
+  <p class="hint">玩法：<b>按住不放</b>看凹陷 + 张力环 → <b>按住拖动</b>拽布 → <b>松手</b>看回弹。
+  触屏手指同样有效。开 <b>prefers-reduced-motion</b> 时布是静态的，文字不受影响。</p>
+  <table>
+    <tr><th>参数</th><th>棉 Cotton</th><th>牛仔 Denim</th><th>丝 Silk</th></tr>
+    <tr><td>最大凹陷</td><td>1.0（基准）</td><td>0.6（硬，按不动太多）</td><td>1.3（软，深）</td></tr>
+    <tr><td>回弹恢复 restore</td><td>0.06</td><td>0.14（回得快）</td><td>0.025（回得慢）</td></tr>
+    <tr><td>阻尼 damping（涟漪）</td><td>0.06</td><td>0.12（几乎不漾）</td><td>0.02（涟漪走全场）</td></tr>
+    <tr><td>波速 spread</td><td>0.22</td><td>0.16（沉）</td><td>0.30（轻快）</td></tr>
+  </table>
+</div>
+<script>
+"use strict";
+// ---- ClothLab: heightfield wave cloth, pointer press dents + drag pulls ----
+// lineage: html-to-cloth (DOM stays semantic, textile is a layer) + Holocloth (live solve).
+// We use a heightfield (2.5D) instead of full Verlet mesh: stable at 60fps in Canvas2D,
+// and honest about it — full mesh drape is v0.2 (WebGL).
+const cv = document.getElementById('cloth'), ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+// sim grid
+const GX = 150, GY = 88, N = GX * GY;
+let hgt = new Float32Array(N), vel = new Float32Array(N);
+let press = new Float32Array(N); // analytic press shape: deterministic, added on top of free waves
+const MATS = {
+  cotton: { dent: 1.0,  restore: 0.060, damp: 0.060, spread: 0.22, sheen: 0.10, aniso: 0.20, warp:[122,106,84],  weft:[96,82,64],   name:'cotton' },
+  denim:  { dent: 0.6,  restore: 0.140, damp: 0.120, spread: 0.16, sheen: 0.12, aniso: 0.42, warp:[52,78,118],   weft:[28,42,68],    name:'denim' },
+  silk:   { dent: 1.3,  restore: 0.025, damp: 0.020, spread: 0.30, sheen: 0.74, aniso: 0.82, warp:[146,52,66],   weft:[110,36,50],   name:'silk' }
+};
+let M = MATS.cotton;
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// weave pattern tile (plain 4x4, precomputed)
+const tile = 4;
+const weaveTile = new Float32Array(tile * tile);
+for (let j = 0; j < tile; j++) for (let i = 0; i < tile; i++)
+  weaveTile[j * tile + i] = ((i + j) % 2 === 0) ? 1 : 0.82;
+// pointer state
+const ptr = { x: -999, y: -999, down: false, px: 0, py: 0, dwell: 0, downT: 0 };
+const stage = document.getElementById('stage');
+function toSim(e) {
+  const r = cv.getBoundingClientRect();
+  const cx = (e.touches ? e.touches[0].clientX : e.clientX), cy = (e.touches ? e.touches[0].clientY : e.clientY);
+  return { x: (cx - r.left) / r.width * W, y: (cy - r.top) / r.height * H };
+}
+stage.addEventListener('pointerdown', e => { const p = toSim(e); ptr.x = p.x; ptr.y = p.y; ptr.px = p.x; ptr.py = p.y; ptr.down = true; ptr.dwell = 0; ptr.downT = performance.now(); stage.setPointerCapture(e.pointerId); });
+stage.addEventListener('pointermove', e => { const p = toSim(e); ptr.px = ptr.x; ptr.py = ptr.y; ptr.x = p.x; ptr.y = p.y; });
+addEventListener('pointerup', () => {
+  // release: the dent becomes rebound velocity — cloth springs up past flat, then ripples
+  if (ptr.down && !reduced) for (let i = 0; i < N; i++) vel[i] -= press[i] * 0.25;
+  ptr.down = false; ptr.dwell = 0;
+});
+document.querySelectorAll('.mats button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.mats button').forEach(x => x.classList.remove('on'));
+  b.classList.add('on'); M = MATS[b.dataset.m];
+});
+const idx = (ix, iy) => iy * GX + ix;
+function step() {
+  const sx = W / GX, sy = H / GY;
+  // free waves only (ripples + rebound). The press dent itself is analytic
+  // (press[] below) so its shape is identical every frame, not eaten by diffusion.
+  for (let gy = 1; gy < GY - 1; gy++) for (let gx = 1; gx <= GX - 2; gx++) {
+    const i = idx(gx, gy);
+    const lap = (hgt[i-1] + hgt[i+1] + hgt[i-GX] + hgt[i+GX]) * 0.25 - hgt[i];
+    vel[i] += lap * M.spread - hgt[i] * M.restore - vel[i] * M.damp;
+  }
+  for (let i = 0; i < N; i++) hgt[i] += vel[i];
+  // analytic press layer: gaussian pit + displaced-volume rim
+  press.fill(0);
+  if (ptr.down && !reduced) {
+    ptr.dwell = Math.min(1, (performance.now() - ptr.downT) / 600); // time-based: full dent in 0.6s
+    const R = 100 * (0.6 + 0.4 * ptr.dwell);
+    const depth = 40 * M.dent * (0.25 + 0.75 * ptr.dwell);
+    const gx0 = Math.max(1, Math.floor((ptr.x - R * 1.5) / sx)), gx1 = Math.min(GX - 2, Math.ceil((ptr.x + R * 1.5) / sx));
+    const gy0 = Math.max(1, Math.floor((ptr.y - R * 1.5) / sy)), gy1 = Math.min(GY - 2, Math.ceil((ptr.y + R * 1.5) / sy));
+    for (let gy = gy0; gy <= gy1; gy++) for (let gx = gx0; gx <= gx1; gx++) {
+      const wx = gx * sx, wy = gy * sy;
+      const d2 = ((wx - ptr.x) ** 2 + (wy - ptr.y) ** 2) / (R * R);
+      if (d2 < 2.25) {
+        const dist = Math.sqrt(d2) * R;
+        const k = Math.exp(-3 * d2);
+        const rq = (dist - R * 0.85) / (R * 0.30);
+        const rim = Math.exp(-rq * rq) * 0.4;
+        const i = idx(gx, gy);
+        press[i] = -depth * k + depth * rim;
+        // drag wake: feed motion into the free-wave layer so pulls leave ripples
+        const vx = ptr.x - ptr.px, vy = ptr.y - ptr.py;
+        vel[i] += (vx * 0.06 + vy * 0.06) * k;
+        vel[i] *= (1 - 0.3 * k); // fingertip damps sloshing under itself
+      }
+    }
+  }
+  // pinned border (stitched edge: bound)
+  for (let gx = 0; gx < GX; gx++) { hgt[idx(gx,0)] = 0; hgt[idx(gx,GY-1)] = 0; vel[idx(gx,0)] = 0; vel[idx(gx,GY-1)] = 0; }
+  for (let gy = 0; gy < GY; gy++) { hgt[idx(0,gy)] = 0; hgt[idx(GX-1,gy)] = 0; vel[idx(0,gy)] = 0; vel[idx(GX-1,gy)] = 0; }
+}
+const img = ctx.createImageData(W, H);
+function render() {
+  const d = img.data;
+  const sx = W / GX, sy = H / GY;
+  // FIXED top-left light: dents read as dents only with directional shading.
+  // (light-follows-pointer killed dent readability — one wall lit, one dark needs a fixed sun.)
+  const ll = Math.hypot(0.45, 0.55, 1);
+  const Lx = -0.45 / ll, Ly = -0.55 / ll, Lz = 1 / ll;
+  for (let y = 0; y < H; y++) {
+    const gy = Math.min(GY - 2, y / sy), gy0 = Math.floor(gy), fy = gy - gy0;
+    for (let x = 0; x < W; x++) {
+      const gx = Math.min(GX - 2, x / sx), gx0 = Math.floor(gx), fx = gx - gx0;
+      const i00 = idx(gx0, gy0);
+      // bilinear height: free waves + analytic press dent
+      const h00 = hgt[i00]+press[i00], h10 = hgt[i00+1]+press[i00+1], h01 = hgt[i00+GX]+press[i00+GX], h11 = hgt[i00+GX+1]+press[i00+GX+1];
+      const h = h00*(1-fx)*(1-fy) + h10*fx*(1-fy) + h01*(1-fx)*fy + h11*fx*fy;
+      // gradient: raw (for UV warp) and gained (for lighting)
+      const rawx = ((h10 - h00) * (1 - fy) + (h11 - h01) * fy) / sx;
+      const rawy = ((h01 - h00) * (1 - fx) + (h11 - h10) * fx) / sy;
+      const dzdx = rawx * 5.0, dzdy = rawy * 5.0;
+      const inv = 1 / Math.hypot(dzdx, dzdy, 1);
+      const nx = -dzdx * inv, ny = -dzdy * inv, nz = inv;
+      const dif = Math.max(0, nx * Lx + ny * Ly + nz * Lz);
+      // anisotropic-ish sheen: vertical streak highlight
+      const sheen = Math.pow(Math.max(0, 1 - Math.abs(nx * 0.9 + ny * 0.15)), 8 + M.aniso * 40) * M.sheen;
+      // weave sampled at UVs warped by the height gradient: threads bunch on dent
+      // walls and smear along drags — the texture is IN the cloth, not on the screen.
+      const shx = Math.max(-14, Math.min(14, -rawx * 10)), shy = Math.max(-14, Math.min(14, -rawy * 10));
+      const wxp = x + shx, wyp = y + shy;
+      const wv = weaveTile[((wyp >> 0) % tile + tile) % tile * tile + (((wxp >> 0) % tile + tile) % tile)];
+      const nz2 = ((Math.sin(wxp * 12.9898 + wyp * 78.233) * 43758.5453) % 1) * 0.06;
+      const onWarp = ((wxp >> 0) + (wyp >> 0)) % 2 === 0;
+      const base = onWarp ? M.warp : M.weft;
+      // dent AO: concave darkens (gain matched to ~40-unit dents)
+      const ao = 1 + Math.max(-0.5, Math.min(0.5, h * 0.022));
+      const li = (0.38 + 0.62 * dif + sheen) * (wv + nz2) * ao;
+      const o = (y * W + x) * 4;
+      d[o] = Math.min(255, base[0] * li * 1.25);
+      d[o+1] = Math.min(255, base[1] * li * 1.25);
+      d[o+2] = Math.min(255, base[2] * li * 1.25);
+      d[o+3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  // tension ring at press point: radius grows with dwell, stretches into an
+  // ellipse along drag direction so pulls read as pulls, not button taps
+  if (ptr.down) {
+    const r = cv.getBoundingClientRect();
+    ctx.save();
+    ctx.scale(r.width / W, r.height / H);
+    const rr = 26 + ptr.dwell * 64;
+    const spx = ptr.x - ptr.px, spy = ptr.y - ptr.py;
+    const spd = Math.hypot(spx, spy);
+    const stretch = Math.min(1.6, 1 + spd / 45);
+    const rot = spd > 2 ? Math.atan2(spy, spx) : 0;
+    ctx.strokeStyle = 'rgba(199,153,67,' + (0.35 + ptr.dwell * 0.5) + ')';
+    ctx.setLineDash([7, 5]);
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(ptr.x, ptr.y, rr * stretch, rr / Math.sqrt(stretch), rot, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.strokeStyle = 'rgba(242,236,225,.5)';
+    ctx.beginPath(); ctx.ellipse(ptr.x, ptr.y, rr * 0.55 * stretch, rr * 0.55 / Math.sqrt(stretch), rot, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+}
+let frames = 0;
+function loop() {
+  if (!reduced) { step(); render(); }
+  else if (frames === 0) { render(); }
+  frames++;
+  requestAnimationFrame(loop);
+}
+// warm start: a gentle ripple so first paint isn't flat
+for (let k = 0; k < 40; k++) { const i = idx(GX>>1, GY>>1); vel[i] -= 0.6; step(); }
+loop();
+// expose for automated QA
+window.__cloth = { ptr, get dwell() { return ptr.dwell; },
+  sample() { let mn = 1e9, mx = -1e9; const cx = (GX>>1), cy = ((GY*0.55)|0);
+    let c = hgt[idx(cx,cy)] + press[idx(cx,cy)];
+    for (let gy = 1; gy < GY-1; gy++) for (let gx = 1; gx < GX-1; gx++) {
+      const v = hgt[idx(gx,gy)] + press[idx(gx,gy)];
+      if (v < mn) mn = v; if (v > mx) mx = v;
+    }
+    return { min: mn, max: mx, center: c, dwell: ptr.dwell }; } };
+</script>
+</body>
+</html>

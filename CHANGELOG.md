@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.1.2 — 2026-10-07 — ClothLab interactive demo
+- New `examples/demo-cloth-press-drag.html`: live cloth you can press and drag
+  (pointer + touch). Analytic press dent (gaussian pit + displaced-volume rim)
+  over a free wave layer; weave sampled at deformation-warped UVs; fixed
+  top-left light so dents read; tension ring stretches into ellipse on drag;
+  release converts dent to rebound velocity (silk ripples, denim thuds).
+  Scripted pointer QA in headless Chromium (press/drag/rebound + silk),
+  vision-verified, no JS errors. Lineage: blueprint §3.5 html-to-cloth
+  (semantic DOM + textile layer) + §3.6 Holocloth (live solve), reimplemented
+  (both lack reusable licenses).
+
 ## v0.1.1 — 2026-10-07 — demos + design spec
 - 3 offline single-file demos, all vision-verified in headless Chromium:
   button-tension (tension ring, stitch focus, 6 states), card-drape
