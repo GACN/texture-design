@@ -75,10 +75,22 @@ const W = cv.width, H = cv.height;
 const GX = 150, GY = 88, N = GX * GY;
 let hgt = new Float32Array(N), vel = new Float32Array(N);
 let press = new Float32Array(N); // analytic press shape: deterministic, added on top of free waves
+let comp = new Float32Array(N);  // compression = laplacian(hgt+press) clamped ≥0: drives wrinkles + cavity AO
+// per-press randomness: no two finger presses make the same dent (breaks the "too uniform" look)
+let pressSeed = { phase: 0, rot: 0, aspect: 1 };
 const MATS = {
-  cotton: { dent: 1.0,  restore: 0.060, damp: 0.060, spread: 0.22, sheen: 0.10, aniso: 0.20, warp:[122,106,84],  weft:[96,82,64],   name:'cotton' },
-  denim:  { dent: 0.6,  restore: 0.140, damp: 0.120, spread: 0.16, sheen: 0.12, aniso: 0.42, warp:[52,78,118],   weft:[28,42,68],    name:'denim' },
-  silk:   { dent: 1.3,  restore: 0.025, damp: 0.020, spread: 0.30, sheen: 0.74, aniso: 0.82, warp:[146,52,66],   weft:[110,36,50],   name:'silk' }
+  cotton: { dent: 1.0,  restore: 0.060, damp: 0.060, spread: 0.22, spreadX: 1.0, spreadY: 1.0, spreadD: 0.0,
+    wrinkleFreq: 0.34, wrinkleAmp: 0.55, cavityGain: 0.055,
+    sheen: 0.10, aniso: 0.20, warp:[122,106,84],  weft:[96,82,64],   name:'cotton' },
+  denim:  { dent: 0.6,  restore: 0.140, damp: 0.120, spread: 0.16, spreadX: 1.0, spreadY: 1.0, spreadD: 0.9,
+    wrinkleFreq: 0.22, wrinkleAmp: 0.35, cavityGain: 0.045,
+    sheen: 0.12, aniso: 0.42, warp:[52,78,118],   weft:[28,42,68],    name:'denim' },
+  silk:   { dent: 1.3,  restore: 0.025, damp: 0.020, spread: 0.30, spreadX: 1.15, spreadY: 0.85, spreadD: 0.0,
+    wrinkleFreq: 0.45, wrinkleAmp: 0.8, cavityGain: 0.07,
+    sheen: 0.74, aniso: 0.82, warp:[146,52,66],   weft:[110,36,50],   name:'silk' }
+  // spreadX/Y/D: Holocloth-style anisotropic response. Plain cotton spreads evenly;
+  // twill denim carries waves along the 45° diagonal (spreadD); satin silk runs warp-wise.
+  // wrinkleFreq/Amp: compression-driven buckle detail (see render). cavityGain: fold darkening.
 };
 let M = MATS.cotton;
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -95,7 +107,9 @@ function toSim(e) {
   const cx = (e.touches ? e.touches[0].clientX : e.clientX), cy = (e.touches ? e.touches[0].clientY : e.clientY);
   return { x: (cx - r.left) / r.width * W, y: (cy - r.top) / r.height * H };
 }
-stage.addEventListener('pointerdown', e => { const p = toSim(e); ptr.x = p.x; ptr.y = p.y; ptr.px = p.x; ptr.py = p.y; ptr.down = true; ptr.dwell = 0; ptr.downT = performance.now(); stage.setPointerCapture(e.pointerId); });
+stage.addEventListener('pointerdown', e => { const p = toSim(e); ptr.x = p.x; ptr.y = p.y; ptr.px = p.x; ptr.py = p.y; ptr.down = true; ptr.dwell = 0; ptr.downT = performance.now();
+  pressSeed = { phase: Math.random() * 6.283, rot: Math.random() * 6.283, aspect: 1 + Math.random() * 0.22 };
+  stage.setPointerCapture(e.pointerId); });
 stage.addEventListener('pointermove', e => { const p = toSim(e); ptr.px = ptr.x; ptr.py = ptr.y; ptr.x = p.x; ptr.y = p.y; });
 addEventListener('pointerup', () => {
   // release: the dent becomes rebound velocity — cloth springs up past flat, then ripples
@@ -109,12 +123,15 @@ document.querySelectorAll('.mats button').forEach(b => b.onclick = () => {
 const idx = (ix, iy) => iy * GX + ix;
 function step() {
   const sx = W / GX, sy = H / GY;
-  // free waves only (ripples + rebound). The press dent itself is analytic
-  // (press[] below) so its shape is identical every frame, not eaten by diffusion.
+  // free waves with ANISOTROPIC spread: warp/weft/diagonal carry ripples differently
   for (let gy = 1; gy < GY - 1; gy++) for (let gx = 1; gx <= GX - 2; gx++) {
     const i = idx(gx, gy);
-    const lap = (hgt[i-1] + hgt[i+1] + hgt[i-GX] + hgt[i+GX]) * 0.25 - hgt[i];
-    vel[i] += lap * M.spread - hgt[i] * M.restore - vel[i] * M.damp;
+    const hC = hgt[i];
+    const lapX = (hgt[i-1] + hgt[i+1]) * 0.5 - hC;
+    const lapY = (hgt[i-GX] + hgt[i+GX]) * 0.5 - hC;
+    const lapD = (hgt[i-GX-1] + hgt[i-GX+1] + hgt[i+GX-1] + hgt[i+GX+1]) * 0.25 - hC;
+    const lap = (M.spreadX * lapX + M.spreadY * lapY + M.spreadD * lapD) / (M.spreadX + M.spreadY + M.spreadD);
+    vel[i] += lap * M.spread * 2 - hC * M.restore - vel[i] * M.damp;
   }
   for (let i = 0; i < N; i++) hgt[i] += vel[i];
   // analytic press layer: gaussian pit + displaced-volume rim
@@ -123,18 +140,24 @@ function step() {
     ptr.dwell = Math.min(1, (performance.now() - ptr.downT) / 600); // time-based: full dent in 0.6s
     const R = 100 * (0.6 + 0.4 * ptr.dwell);
     const depth = 40 * M.dent * (0.25 + 0.75 * ptr.dwell);
+    // finger dents are ellipses, never circles: rotate + squash per press
+    const cs = Math.cos(pressSeed.rot), sn = Math.sin(pressSeed.rot), asp = pressSeed.aspect;
     const gx0 = Math.max(1, Math.floor((ptr.x - R * 1.5) / sx)), gx1 = Math.min(GX - 2, Math.ceil((ptr.x + R * 1.5) / sx));
     const gy0 = Math.max(1, Math.floor((ptr.y - R * 1.5) / sy)), gy1 = Math.min(GY - 2, Math.ceil((ptr.y + R * 1.5) / sy));
     for (let gy = gy0; gy <= gy1; gy++) for (let gx = gx0; gx <= gx1; gx++) {
-      const wx = gx * sx, wy = gy * sy;
-      const d2 = ((wx - ptr.x) ** 2 + (wy - ptr.y) ** 2) / (R * R);
+      const dx0 = gx * sx - ptr.x, dy0 = gy * sy - ptr.y;
+      const ex = (dx0 * cs + dy0 * sn) / asp, ey = (-dx0 * sn + dy0 * cs) * asp;
+      const d2 = (ex * ex + ey * ey) / (R * R);
       if (d2 < 2.25) {
         const dist = Math.sqrt(d2) * R;
         const k = Math.exp(-3 * d2);
         const rq = (dist - R * 0.85) / (R * 0.30);
         const rim = Math.exp(-rq * rq) * 0.4;
+        // edge wobble: rim radius breathes with angle so the ring is never a perfect circle
+        const ang = Math.atan2(ey, ex);
+        const wob = 1 + 0.10 * Math.sin(ang * 3 + pressSeed.phase) + 0.06 * Math.sin(ang * 5 - pressSeed.phase * 1.7);
         const i = idx(gx, gy);
-        press[i] = -depth * k + depth * rim;
+        press[i] = (-depth * k + depth * rim) * wob;
         // drag wake: feed motion into the free-wave layer so pulls leave ripples
         const vx = ptr.x - ptr.px, vy = ptr.y - ptr.py;
         vel[i] += (vx * 0.06 + vy * 0.06) * k;
@@ -145,6 +168,14 @@ function step() {
   // pinned border (stitched edge: bound)
   for (let gx = 0; gx < GX; gx++) { hgt[idx(gx,0)] = 0; hgt[idx(gx,GY-1)] = 0; vel[idx(gx,0)] = 0; vel[idx(gx,GY-1)] = 0; }
   for (let gy = 0; gy < GY; gy++) { hgt[idx(0,gy)] = 0; hgt[idx(GX-1,gy)] = 0; vel[idx(0,gy)] = 0; vel[idx(GX-1,gy)] = 0; }
+  // compression field (Holocloth cavity driver): where cloth bunches up, folds darken
+  // and wrinkles grow. Computed on total height so the press dent participates.
+  for (let gy = 1; gy < GY - 1; gy++) for (let gx = 1; gx <= GX - 2; gx++) {
+    const i = idx(gx, gy);
+    const tC = hgt[i] + press[i];
+    const avg = (hgt[i-1]+press[i-1] + hgt[i+1]+press[i+1] + hgt[i-GX]+press[i-GX] + hgt[i+GX]+press[i+GX]) * 0.25;
+    comp[i] = Math.max(0, avg - tC);
+  }
 }
 const img = ctx.createImageData(W, H);
 function render() {
@@ -161,11 +192,27 @@ function render() {
       const i00 = idx(gx0, gy0);
       // bilinear height: free waves + analytic press dent
       const h00 = hgt[i00]+press[i00], h10 = hgt[i00+1]+press[i00+1], h01 = hgt[i00+GX]+press[i00+GX], h11 = hgt[i00+GX+1]+press[i00+GX+1];
+      // bilinear compression (fold driver)
+      const c00 = comp[i00], c10 = comp[i00+1], c01 = comp[i00+GX], c11 = comp[i00+GX+1];
+      const cf = c00*(1-fx)*(1-fy) + c10*fx*(1-fy) + c01*(1-fx)*fy + c11*fx*fy;
       const h = h00*(1-fx)*(1-fy) + h10*fx*(1-fy) + h01*(1-fx)*fy + h11*fx*fy;
       // gradient: raw (for UV warp) and gained (for lighting)
       const rawx = ((h10 - h00) * (1 - fy) + (h11 - h01) * fy) / sx;
       const rawy = ((h01 - h00) * (1 - fx) + (h11 - h10) * fx) / sy;
-      const dzdx = rawx * 5.0, dzdy = rawy * 5.0;
+      let dzdx = rawx * 5.0, dzdy = rawy * 5.0;
+      // buckle wrinkles: ridges run across the local slope (folds align against the
+      // push), amplitude grows with compression — this is what breaks the perfect
+      // gaussian look. Phase seeded per press so every dent wrinkles differently.
+      const slope = Math.hypot(rawx, rawy);
+      if (slope > 0.02) {
+        const perp = Math.atan2(rawy, rawx) + Math.PI / 2;
+        const cp = Math.cos(perp), sp = Math.sin(perp);
+        const sProj = x * cp + y * sp;
+        const ridge = Math.sin(sProj * M.wrinkleFreq * 2.2 + pressSeed.phase + slope * 2.0);
+        const wamp = Math.min(1, cf * 0.5 + slope * 0.25) * M.wrinkleAmp;
+        dzdx += cp * ridge * wamp * 1.4;
+        dzdy += sp * ridge * wamp * 1.4;
+      }
       const inv = 1 / Math.hypot(dzdx, dzdy, 1);
       const nx = -dzdx * inv, ny = -dzdy * inv, nz = inv;
       const dif = Math.max(0, nx * Lx + ny * Ly + nz * Lz);
@@ -179,8 +226,10 @@ function render() {
       const nz2 = ((Math.sin(wxp * 12.9898 + wyp * 78.233) * 43758.5453) % 1) * 0.06;
       const onWarp = ((wxp >> 0) + (wyp >> 0)) % 2 === 0;
       const base = onWarp ? M.warp : M.weft;
-      // dent AO: concave darkens (gain matched to ~40-unit dents)
-      const ao = 1 + Math.max(-0.5, Math.min(0.5, h * 0.022));
+      // cavity AO (Holocloth): folds darken by compression, not by raw depth —
+      // a flat deep pit stays readable, bunched folds go dark. Plus a small depth term.
+      const hCl = Math.max(-0.25, Math.min(0.2, h * 0.008));
+      const ao = (1 - Math.min(0.55, cf * M.cavityGain)) * (1 + hCl);
       const li = (0.38 + 0.62 * dif + sheen) * (wv + nz2) * ao;
       const o = (y * W + x) * 4;
       d[o] = Math.min(255, base[0] * li * 1.25);

@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.1.3 — 2026-10-07 — ClothLab realism pass (real algorithms)
+- Read Holocloth `cloth.ts` (Verlet + structural/shear/bend constraints,
+  smoothstep multi-point grab, cavity AO, 120Hz substeps) and html-to-cloth
+  `clothPhysics.ts` (Verlet + obstacles + sleep/wake) from source; ported the
+  portable ideas into Canvas2D (no code copied; html-to-cloth has no LICENSE).
+- Kills the "too uniform gaussian dent": per-press random ellipse rotation /
+  aspect / rim breathing, compression-driven buckle wrinkle normals, cavity AO
+  by fold compression instead of raw depth, anisotropic wave spread per weave.
+- Acceptance: two presses on the same cloth make visibly different dents.
+
 ## v0.1.2 — 2026-10-07 — ClothLab interactive demo
 - New `examples/demo-cloth-press-drag.html`: live cloth you can press and drag
   (pointer + touch). Analytic press dent (gaussian pit + displaced-volume rim)
