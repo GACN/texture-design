@@ -1,0 +1,6 @@
+{
+  "name": "@texture-design/react",
+  "version": "0.1.0",
+  "description": "React bindings (stubs, blueprint ch.17)",
+  "peerDependencies": { "react": ">=18" }
+}

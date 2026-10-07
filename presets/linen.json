@@ -1,0 +1,38 @@
+{
+  "name": "linen-rustic-01",
+  "family": "linen",
+  "fiber": {
+    "fuzz": 0.35,
+    "uniformity": 0.45
+  },
+  "yarn": {
+    "thickness": 0.62,
+    "twist": 0.42
+  },
+  "weave": {
+    "type": "plain",
+    "density": 34,
+    "angle": 0
+  },
+  "surface": {
+    "roughness": 0.78,
+    "normalStrength": 0.34
+  },
+  "optics": {
+    "sheen": 0.08,
+    "anisotropy": 0.3
+  },
+  "physics": {
+    "mass": 0.45,
+    "bending": 0.55,
+    "stretch": 0.15,
+    "shear": 0.45,
+    "damping": 0.38,
+    "recovery": 0.5,
+    "friction": 0.6
+  },
+  "wear": {
+    "enabled": false,
+    "rate": 0.0
+  }
+}

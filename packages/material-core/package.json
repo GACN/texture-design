@@ -1,0 +1,6 @@
+{
+  "name": "@texture-design/material-core",
+  "version": "0.1.0",
+  "description": "Types + preset loader + semantic resolver (zero deps)",
+  "main": "src/index.ts"
+}

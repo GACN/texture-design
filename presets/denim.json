@@ -1,0 +1,38 @@
+{
+  "name": "denim-indigo-01",
+  "family": "denim",
+  "fiber": {
+    "fuzz": 0.12,
+    "uniformity": 0.72
+  },
+  "yarn": {
+    "thickness": 0.68,
+    "twist": 0.54
+  },
+  "weave": {
+    "type": "twill",
+    "density": 44,
+    "angle": 45
+  },
+  "surface": {
+    "roughness": 0.72,
+    "normalStrength": 0.38
+  },
+  "optics": {
+    "sheen": 0.12,
+    "anisotropy": 0.42
+  },
+  "physics": {
+    "mass": 0.7,
+    "bending": 0.74,
+    "stretch": 0.18,
+    "shear": 0.52,
+    "damping": 0.44,
+    "recovery": 0.46,
+    "friction": 0.68
+  },
+  "wear": {
+    "enabled": true,
+    "rate": 0.04
+  }
+}

@@ -1,0 +1,48 @@
+:root {
+  /* ---- 7.1 primitive: pure physics (from blueprint) ---- */
+  --tx-fiber-fuzz: 0.08;
+  --tx-yarn-width: 0.72px;
+  --tx-yarn-twist: 0.36;
+  --tx-weave-density: 42;
+  --tx-weave-angle: 45deg;
+  --tx-surface-roughness: 0.72;
+  --tx-surface-normal: 0.25;
+  --tx-tension-x: 0.70;
+  --tx-tension-y: 0.62;
+  --tx-drape-bending: 0.32;
+  --tx-drape-mass: 0.40;
+  --tx-drape-damping: 0.20;
+  --tx-sheen: 0.28;
+  --tx-anisotropy: 0.70;
+  --tx-friction: 0.55;
+  --tx-wear: 0.00;
+
+  /* ---- 7.2 semantic: usage only ---- */
+  --tx-surface-primary: #faf8f4;
+  --tx-surface-secondary: #f1ece3;
+  --tx-surface-floating: #ffffff;
+  --tx-surface-interactive: #e9e2d4;
+  --tx-surface-disabled: #e3e0da;
+  --tx-motion-soft: 320ms;
+  --tx-motion-firm: 180ms;
+  --tx-motion-heavy: 480ms;
+  --tx-edge-selected: #8a6d2f;
+  --tx-edge-focus: #2f5d8a;
+  --tx-edge-warning: #a33b2e;
+  --tx-tension-idle: 0.30;
+  --tx-tension-hover: 0.55;
+  --tx-tension-pressed: 0.85;
+  --tx-tension-dragging: 1.00;
+
+  /* ---- 7.4 component ---- */
+  --tx-button-material: cotton;
+  --tx-button-press-depth: 2px;
+  --tx-button-edge-stitch: 1px dashed;
+  --tx-button-tension: var(--tx-tension-idle);
+  --tx-card-drape: var(--tx-drape-bending);
+  --tx-card-edge: bound;
+  --tx-card-sheen: var(--tx-sheen);
+  --tx-sheet-anchor-count: 2;
+  --tx-sheet-bending: 0.45;
+  --tx-sheet-gravity: 0.60;
+}

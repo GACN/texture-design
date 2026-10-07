@@ -1,0 +1,38 @@
+{
+  "name": "silk-charmeuse-01",
+  "family": "silk",
+  "fiber": {
+    "fuzz": 0.06,
+    "uniformity": 0.92
+  },
+  "yarn": {
+    "thickness": 0.32,
+    "twist": 0.28
+  },
+  "weave": {
+    "type": "satin",
+    "density": 48,
+    "angle": 0
+  },
+  "surface": {
+    "roughness": 0.28,
+    "normalStrength": 0.22
+  },
+  "optics": {
+    "sheen": 0.74,
+    "anisotropy": 0.82
+  },
+  "physics": {
+    "mass": 0.24,
+    "bending": 0.2,
+    "stretch": 0.3,
+    "shear": 0.4,
+    "damping": 0.18,
+    "recovery": 0.72,
+    "friction": 0.25
+  },
+  "wear": {
+    "enabled": false,
+    "rate": 0.0
+  }
+}

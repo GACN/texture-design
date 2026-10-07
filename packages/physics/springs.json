@@ -1,0 +1,7 @@
+{
+  "_note": "stiffness/damping/mass for a damped spring per interaction; heavier+stiffer = slower",
+  "soft":   { "stiffness": 120, "damping": 14, "mass": 0.6 },
+  "firm":   { "stiffness": 220, "damping": 22, "mass": 0.8 },
+  "heavy":  { "stiffness": 140, "damping": 26, "mass": 1.4 },
+  "elastic": { "stiffness": 180, "damping": 10, "mass": 0.5 }
+}

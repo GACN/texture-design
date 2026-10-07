@@ -1,0 +1,38 @@
+{
+  "name": "cotton-neutral-01",
+  "family": "cotton",
+  "fiber": {
+    "fuzz": 0.2,
+    "uniformity": 0.8
+  },
+  "yarn": {
+    "thickness": 0.5,
+    "twist": 0.36
+  },
+  "weave": {
+    "type": "plain",
+    "density": 40,
+    "angle": 0
+  },
+  "surface": {
+    "roughness": 0.7,
+    "normalStrength": 0.25
+  },
+  "optics": {
+    "sheen": 0.1,
+    "anisotropy": 0.2
+  },
+  "physics": {
+    "mass": 0.4,
+    "bending": 0.45,
+    "stretch": 0.25,
+    "shear": 0.5,
+    "damping": 0.35,
+    "recovery": 0.6,
+    "friction": 0.55
+  },
+  "wear": {
+    "enabled": false,
+    "rate": 0.0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "name": "organza-mist-01",
+  "family": "organza",
+  "fiber": {
+    "fuzz": 0.05,
+    "uniformity": 0.88
+  },
+  "yarn": {
+    "thickness": 0.28,
+    "twist": 0.22
+  },
+  "weave": {
+    "type": "plain",
+    "density": 30,
+    "angle": 0
+  },
+  "surface": {
+    "roughness": 0.35,
+    "normalStrength": 0.18
+  },
+  "optics": {
+    "sheen": 0.45,
+    "anisotropy": 0.55
+  },
+  "physics": {
+    "mass": 0.18,
+    "bending": 0.3,
+    "stretch": 0.35,
+    "shear": 0.45,
+    "damping": 0.15,
+    "recovery": 0.65,
+    "friction": 0.3
+  },
+  "wear": {
+    "enabled": false,
+    "rate": 0.0
+  },
+  "opacity": 0.45
+}

@@ -1,0 +1,6 @@
+{
+  "name": "@texture-design/tokens",
+  "version": "0.1.0",
+  "description": "Primitive / semantic / component CSS tokens for Texture Design",
+  "main": "tokens.css"
+}
