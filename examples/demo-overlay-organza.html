@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TextileOverlay — 欧根纱浮层 · Texture Design Demo</title>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:system-ui,"PingFang SC","Microsoft YaHei",sans-serif;margin:0;color:#f5efe2;min-height:100vh}
+  #bg{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2}
+  #veil{position:fixed;inset:0;background:rgba(10,8,6,.28);z-index:-1}
+  .wrap{max-width:1020px;margin:0 auto;padding:32px 24px 64px}
+  .kicker{color:#f3c96b;font-size:12px;letter-spacing:.18em;margin:0 0 8px;text-shadow:0 1px 8px rgba(0,0,0,.6)}
+  h1{font-family:Georgia,"Songti SC",serif;font-size:34px;margin:0 0 10px;text-shadow:0 2px 14px rgba(0,0,0,.6)}
+  .lede{font-size:14px;line-height:1.8;max-width:680px;margin:0 0 26px;color:#efe7d6;text-shadow:0 1px 8px rgba(0,0,0,.7)}
+  .duo{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .panel{border-radius:20px;padding:26px;min-height:380px;position:relative;overflow:hidden}
+  .panel h3{font-size:13px;letter-spacing:.2em;margin:0 0 4px}
+  .panel h4{font-family:Georgia,serif;font-size:23px;margin:0 0 10px;font-weight:600}
+  .panel p{font-size:13.5px;line-height:1.8;margin:0 0 14px}
+  .panel .row{display:flex;gap:10px;margin-top:16px}
+  .panel button{border:0;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer}
+  /* organza: structural, warm, woven */
+  .organza{background:rgba(247,240,224,.82);color:#2c2417;border:1px solid rgba(120,90,40,.55);
+    box-shadow:0 20px 50px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.5)}
+  .organza canvas{position:absolute;inset:0;width:100%;height:100%;opacity:.5;pointer-events:none;mix-blend-mode:multiply}
+  .organza .inner{position:relative}
+  .organza h3{color:#8a6d2f}
+  .organza button{background:#2c2417;color:#f5efe2}
+  .organza button.ghost{background:transparent;border:1.5px dashed #8a6d2f;color:#2c2417}
+  .organza .tag{display:inline-block;font-size:11px;border:1px solid #8a6d2f;border-radius:20px;padding:3px 12px;margin-right:6px;color:#6d5626}
+  /* glass: clear, refractive, edgeless */
+  .glass{background:linear-gradient(180deg,rgba(16,20,28,.22),rgba(16,20,28,.42)),rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.35);
+    backdrop-filter:blur(22px) saturate(1.4);-webkit-backdrop-filter:blur(22px) saturate(1.4);
+    box-shadow:0 20px 50px rgba(0,0,0,.3), inset 0 1px 1px rgba(255,255,255,.5)}
+  .glass h4,.glass p{text-shadow:0 1px 10px rgba(0,0,0,.6)}
+  .glass h3{color:#dfe9f2}
+  .glass button{background:rgba(255,255,255,.92);color:#1a2430}
+  .glass button.ghost{background:transparent;border:1px solid rgba(255,255,255,.6);color:#fff}
+  .glass .tag{display:inline-block;font-size:11px;border:1px solid rgba(255,255,255,.5);border-radius:20px;padding:3px 12px;margin-right:6px}
+  .verdict{margin-top:20px;background:rgba(20,16,10,.78);border:1px solid #3a342a;border-radius:16px;padding:22px 24px;backdrop-filter:blur(8px)}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid #3a342a}
+  th{color:#f3c96b;font-size:12px;letter-spacing:.06em}
+  td code{color:#e8d9b8;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+  @media(max-width:720px){.duo{grid-template-columns:1fr}h1{font-size:26px}}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas><div id="veil"></div>
+<div class="wrap">
+  <p class="kicker">TEXTURE DESIGN · DEMO 03</p>
+  <h1>TextileOverlay <span style="color:#f3c96b">欧根纱浮层</span></h1>
+  <p class="lede">欧根纱不是玻璃：玻璃追求"消失"，让光线无损通过；欧根纱承认"我是一块布" —— 半透明、有结构、有经纬，遮住背景的同时保留空气感。左边是欧根纱，右边是 Liquid Glass 风格，并排看差别。</p>
+
+  <div class="duo">
+    <div class="panel organza">
+      <canvas id="orgWeave" width="300" height="380"></canvas>
+      <div class="inner">
+        <h3>ORGANZA · opacity .45</h3>
+        <h4>今晚的社区放映</h4>
+        <p>半透明、轻、有结构。浮层、弹窗、层叠导航用它 —— 用户始终知道这是一层"纱"，而不是一块凭空出现的毛玻璃。</p>
+        <div><span class="tag">透气</span><span class="tag">有纹理</span><span class="tag">暖</span></div>
+        <div class="row"><button>立即报名</button><button class="ghost">稍后再看</button></div>
+      </div>
+    </div>
+    <div class="panel glass">
+      <h3>LIQUID GLASS · 对照组</h3>
+      <h4>今晚的社区放映</h4>
+      <p>透明、折射、无边缘存在感。同一份内容，玻璃版更"消失"，纱版更"在场" —— 选哪个取决于你想让用户感觉到材料，还是感觉不到。</p>
+      <div><span class="tag">消失</span><span class="tag">折射</span><span class="tag">冷</span></div>
+      <div class="row"><button>立即报名</button><button class="ghost">稍后再看</button></div>
+    </div>
+  </div>
+
+  <div class="verdict">
+    <table>
+      <tr><th></th><th>欧根纱 Organza</th><th>液态玻璃 Liquid Glass</th></tr>
+      <tr><td><code>存在感</code></td><td>有结构，承认遮挡</td><td>追求消失，无缝融入</td></tr>
+      <tr><td><code>光学</code></td><td>漫射 + 经纬纹理 (<code>sheen .45</code>)</td><td>折射 + 镜面高光</td></tr>
+      <tr><td><code>情绪</code></td><td>暖、人情味、社区感</td><td>冷、精密、系统感</td></tr>
+      <tr><td><code>适用</code></td><td>社区、内容、生活服务浮层</td><td>系统级控件、工具栏、Dock</td></tr>
+    </table>
+  </div>
+</div>
+
+<script>
+// scenic backdrop: dusk ridges + grain
+(function(){
+  const c = document.getElementById("bg");
+  function size(){ c.width = innerWidth; c.height = innerHeight; draw(); }
+  function draw(){
+    const w = c.width, h = c.height, x = c.getContext("2d");
+    const sky = x.createLinearGradient(0, 0, 0, h);
+    sky.addColorStop(0, "#2b3a5e"); sky.addColorStop(.45, "#7a4a52");
+    sky.addColorStop(.62, "#d98a4b"); sky.addColorStop(.75, "#3a2c33"); sky.addColorStop(1, "#171220");
+    x.fillStyle = sky; x.fillRect(0, 0, w, h);
+    // sun
+    const sg = x.createRadialGradient(w * .62, h * .60, 4, w * .62, h * .60, h * .22);
+    sg.addColorStop(0, "rgba(255,214,150,.95)"); sg.addColorStop(1, "rgba(255,214,150,0)");
+    x.fillStyle = sg; x.fillRect(0, 0, w, h);
+    // ridges
+    const ridge = (base, amp, col, seed) => {
+      x.fillStyle = col; x.beginPath(); x.moveTo(0, h);
+      for(let px = 0; px <= w; px += 8){
+        const y = base + Math.sin(px * .004 + seed) * amp + Math.sin(px * .013 + seed * 2) * amp * .4;
+        x.lineTo(px, y);
+      }
+      x.lineTo(w, h); x.closePath(); x.fill();
+    };
+    ridge(h * .66, h * .05, "#4a3340", 1.2);
+    ridge(h * .76, h * .06, "#2c2130", 3.1);
+    ridge(h * .88, h * .05, "#171220", 5.4);
+    // grain
+    const img = x.getImageData(0, 0, w, h), dd = img.data;
+    for(let i = 0; i < dd.length; i += 16){
+      const n = (Math.random() - .5) * 14;
+      dd[i] += n; dd[i+1] += n; dd[i+2] += n;
+    }
+    x.putImageData(img, 0, 0);
+  }
+  addEventListener("resize", size); size();
+})();
+// organza weave overlay (fine plain weave, low contrast)
+(function(){
+  const cv = document.getElementById("orgWeave");
+  const w = cv.width, h = cv.height, ctx = cv.getContext("2d");
+  const img = ctx.createImageData(w, h), d = img.data;
+  for(let y = 0; y < h; y++) for(let x = 0; x < w; x++){
+    const warp = .5 + .5 * Math.sin(x * Math.PI * 30 / w * 2);
+    const weft = .5 + .5 * Math.sin(y * Math.PI * 30 / w * 2);
+    const m = Math.max(warp, weft);
+    const v = 228 + m * 22, k = (y * w + x) * 4;
+    d[k] = v; d[k+1] = v - 8; d[k+2] = v - 24; d[k+3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+})();
+</script>
+</body>
+</html>

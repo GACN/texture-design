@@ -9,7 +9,8 @@ Source: blueprint v0.1 ch.25–26 (verbatim logic, reformatted as checklist).
 - [x] material-core types + loader (`packages/material-core/`)
 - [x] Shader sketches (`packages/shaders/`)
 - [x] Offline playground (`examples/playground.html`)
-- [ ] 3 demos: button-tension, card-drape, overlay-organza
+- [x] 3 demos: button-tension, card-drape, overlay-organza (`examples/demo-*.html`, vision-verified)
+- [x] Design spec v0.1 in M3/HIG format (`docs/design-spec.md`)
 - [ ] Open first batch of GitHub Issues (see docs/research.md ch.26)
 
 ## 90 days — v0.2 alpha

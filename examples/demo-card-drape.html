@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TextileCard — 悬垂卡片 · Texture Design Demo</title>
+<style>
+  :root{--bg:#131109;--ink:#f2ece1;--muted:#b9ae9c;--line:#3a342a;--gold:#c79943}
+  *{box-sizing:border-box}
+  body{font-family:system-ui,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);margin:0;padding:32px 24px 64px}
+  .wrap{max-width:1020px;margin:0 auto}
+  .kicker{color:var(--gold);font-size:12px;letter-spacing:.18em;margin:0 0 8px}
+  h1{font-family:Georgia,"Songti SC",serif;font-size:34px;margin:0 0 10px}
+  .lede{color:var(--muted);font-size:14px;line-height:1.8;max-width:660px;margin:0 0 26px}
+  h2{font-size:15px;letter-spacing:.08em;color:var(--gold);margin:30px 0 14px;text-transform:uppercase}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+  .txcard{position:relative;border-radius:18px;overflow:hidden;min-height:340px;
+    border:1px solid rgba(255,255,255,.09);
+    box-shadow:0 24px 60px rgba(0,0,0,.5);
+    transition:transform .25s ease;transform-style:preserve-3d;will-change:transform}
+  .txcard canvas.weave{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .txcard .shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.38),rgba(0,0,0,.06) 42%,rgba(0,0,0,.66));pointer-events:none}
+  .txcard .body{position:absolute;inset:0;padding:22px;display:flex;flex-direction:column;justify-content:flex-end}
+  .txcard .mat{font-size:11px;letter-spacing:.22em;color:var(--gold);margin-bottom:6px}
+  .txcard h3{font-family:Georgia,serif;font-size:24px;margin:0 0 6px;font-weight:600}
+  .txcard p{font-size:13px;line-height:1.7;color:#e6ddcb;margin:0 0 12px}
+  .txcard .spec{font-size:11.5px;color:var(--muted);font-family:ui-monospace,Menlo,monospace}
+  .stitch{position:absolute;width:18px;height:18px;pointer-events:none;opacity:.85}
+  .stitch::before,.stitch::after{content:"";position:absolute;background:#efe6d2}
+  .stitch::before{width:100%;height:1.5px;top:8px}
+  .stitch::after{width:1.5px;height:100%;left:8px}
+  .tl{top:12px;left:12px}.tr{top:12px;right:12px}.bl{bottom:12px;left:12px}.br{bottom:12px;right:12px}
+  .panel{background:#1d1913;border:1px solid var(--line);border-radius:16px;padding:22px 24px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line)}
+  th{color:var(--gold);font-size:12px;letter-spacing:.06em}
+  td code{color:#e8d9b8;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+  .hint{font-size:12px;color:var(--muted);margin-top:12px}
+  @media(max-width:640px){h1{font-size:26px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="kicker">TEXTURE DESIGN · DEMO 02</p>
+  <h1>TextileCard <span style="color:var(--gold)">悬垂卡片</span></h1>
+  <p class="lede">卡片是一块被固定在界面中的织物 —— 四角针迹是钉住它的钉子。移动鼠标，光源跟着走：真丝的高光会流动，亚麻几乎不动，牛仔只泛出斜纹的暗光。这就是 anisotropy（各向异性）的差别。</p>
+
+  <div class="grid" id="grid">
+    <div class="txcard" data-preset="linen">
+      <canvas class="weave" width="360" height="420"></canvas><div class="shade"></div>
+      <span class="stitch tl"></span><span class="stitch tr"></span><span class="stitch bl"></span><span class="stitch br"></span>
+      <div class="body"><div class="mat">LINEN · 平纹</div><h3>干爽的编辑器</h3>
+        <p>结构明显、不反光，适合长时间阅读与创作。像纸，但比纸结实。</p>
+        <div class="spec">roughness .78 · sheen .08 · plain 34</div></div>
+    </div>
+    <div class="txcard" data-preset="denim">
+      <canvas class="weave" width="360" height="420"></canvas><div class="shade"></div>
+      <span class="stitch tl"></span><span class="stitch tr"></span><span class="stitch bl"></span><span class="stitch br"></span>
+      <div class="body"><div class="mat">DENIM · 斜纹 45°</div><h3>越用越旧的工具</h3>
+        <p>中高刚度，自带磨损记忆。文件管理、长期主义的工具型界面。</p>
+        <div class="spec">roughness .72 · sheen .12 · twill 44 · wear ✓</div></div>
+    </div>
+    <div class="txcard" data-preset="silk">
+      <canvas class="weave" width="360" height="420"></canvas><div class="shade"></div>
+      <span class="stitch tl"></span><span class="stitch tr"></span><span class="stitch bl"></span><span class="stitch br"></span>
+      <div class="body"><div class="mat">SILK · 缎纹</div><h3>流动的 Hero</h3>
+        <p>强方向高光、轻、低摩擦。音乐、会员、高级感表面才配用丝。</p>
+        <div class="spec">roughness .28 · sheen .74 · aniso .82</div></div>
+    </div>
+  </div>
+
+  <h2>Tokens</h2>
+  <div class="panel">
+    <table>
+      <tr><th>Token</th><th>值</th><th>说明</th></tr>
+      <tr><td><code>--tx-card-drape</code></td><td><code>bending / mass</code></td><td>悬垂度：丝大、牛仔小，倾斜跟随幅度据此缩放</td></tr>
+      <tr><td><code>--tx-card-sheen</code></td><td><code>0.08 – 0.74</code></td><td>高光强度，随光源方向实时变化</td></tr>
+      <tr><td><code>--tx-card-edge</code></td><td><code>bound / stitched</code></td><td>四角针迹固定，替代普通圆角描边</td></tr>
+    </table>
+    <p class="hint">降级：关闭动效（prefers-reduced-motion）时光照冻结为默认角度，倾斜禁用 —— 信息一字不少。</p>
+  </div>
+</div>
+
+<script>
+const PRESETS = {
+  linen:{type:"plain",density:30,fuzz:.20,aniso:.30,sheen:.10,warp:[206,192,168],weft:[188,172,148],tilt:1.2},
+  denim:{type:"twill",density:36,fuzz:.16,aniso:.42,sheen:.14,warp:[52,80,122],weft:[28,42,68],tilt:.8},
+  silk:{type:"satin",density:40,fuzz:.05,aniso:.82,sheen:.80,warp:[186,64,80],weft:[120,34,52],tilt:2.2}
+};
+function weave(canvas, o){
+  const w = canvas.width, h = canvas.height;
+  const ctx = canvas.getContext("2d");
+  const img = ctx.createImageData(w, h), d = img.data;
+  const nT = 40, tw = w / nT;
+  const rows = Math.round(nT * h / w / 1.6), th = h / rows;
+  const H = new Float32Array(w * h);
+  for(let y = 0; y < h; y++) for(let x = 0; x < w; x++){
+    const i = Math.min(nT - 1, Math.floor(x / tw)), j = Math.min(rows - 1, Math.floor(y / th));
+    const fx = (x - i * tw) / tw - .5, fy = (y - j * th) / th - .5;
+    const b = (t) => Math.cos(t * Math.PI);
+    let mw, mf;
+    if(o.type === "twill"){ const dg = (((i + 2 * j) % 4) + 4) % 4; mw = dg < 2 ? 1 : .25; mf = 1.25 - mw; }
+    else if(o.type === "satin"){ mw = .9; mf = .35; }
+    else { const up = (i + j) % 2 === 0; mw = up ? 1 : .3; mf = up ? .3 : 1; }
+    H[y * w + x] = (Math.max(b(fx) * mw, b(fy) * mf) - .55) * (o.type === "satin" ? .45 : 1) + ((Math.sin(x * 12.9898 + y * 78.233) * 43758.5453 % 1) * o.fuzz);
+  }
+  const lx = o.light.x, ly = o.light.y;
+  for(let y = 0; y < h; y++) for(let x = 0; x < w; x++){
+    const xm = H[y * w + Math.max(0, x - 1)], xp = H[y * w + Math.min(w - 1, x + 1)];
+    const ym = H[Math.max(0, y - 1) * w + x], yp = H[Math.min(h - 1, y + 1) * w + x];
+    let nx = (xm - xp) * 1.5, ny = (ym - yp) * 1.5, nz = 1;
+    const il = 1 / Math.hypot(nx, ny, nz); nx *= il; ny *= il; nz *= il;
+    const diff = Math.max(0, nx * lx + ny * ly + nz * .8);
+    const sheen = Math.pow(Math.max(0, 1 - Math.abs(nx * .92 + ny * .2)), 8 + o.aniso * 40) * o.sheen;
+    const i = Math.min(nT - 1, Math.floor(x / tw)), j = Math.min(rows - 1, Math.floor(y / th));
+    let onWarp = true;
+    if(o.type === "twill"){ const dg = (((i + 2 * j) % 4) + 4) % 4; onWarp = dg < 2; }
+    else if(o.type !== "satin") onWarp = (i + j) % 2 === 0;
+    const base = onWarp ? o.warp : o.weft;
+    const li = .42 + .78 * diff + sheen * 1.2;
+    const k = (y * w + x) * 4;
+    d[k] = Math.min(255, base[0] * li); d[k+1] = Math.min(255, base[1] * li);
+    d[k+2] = Math.min(255, base[2] * li); d[k+3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+const cards = [...document.querySelectorAll(".txcard")];
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+function paint(light){
+  cards.forEach(c => {
+    const p = PRESETS[c.dataset.preset];
+    weave(c.querySelector("canvas"), {...p, light});
+  });
+}
+paint({x:-.35, y:-.45});
+let raf = null;
+addEventListener("pointermove", (e) => {
+  if(reduced) return;
+  if(raf) return;
+  raf = requestAnimationFrame(() => {
+    raf = null;
+    const nx = e.clientX / innerWidth * 2 - 1, ny = e.clientY / innerHeight * 2 - 1;
+    paint({x: nx * .8, y: ny * .8});
+    cards.forEach(c => {
+      const t = PRESETS[c.dataset.preset].tilt;
+      c.style.transform = `perspective(900px) rotateY(${nx * t}deg) rotateX(${-ny * t}deg)`;
+    });
+  });
+});
+</script>
+</body>
+</html>
