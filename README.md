@@ -4,7 +4,7 @@ An experimental digital design language derived from textile structure,
 material behavior, and fabrication logic.
 
 > **Working name**: Texture Design · **Technical name**: Textile Design Language (TDL) · **Public alias**: Woven UI
-> **Status**: v0.1 foundation — Research / Architecture Seed / Ready to Prototype (2026-10-07)
+> **Status**: v0.1.4 ClothLab — 4 vision-verified interactive demos, real cloth algorithms ported (Holocloth/html-to-cloth lineage), 5.7→21.1fps perf pass (2026-10-07). Start at `examples/index.html`.
 
 Texture Design is NOT "a burlap JPG as background". It translates real textile
 behavior — fiber, yarn, weave, tension, drape, friction, sheen, wear, stitching —
