@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.1.4 — 2026-10-07 — ClothLab perf (3.7x)
+- Complaint: laggy on device. Profiled: render was 97% of frame cost (34ms),
+  all per-pixel trig (atan2/sin/hypot/pow at 480k px).
+- Fixes: wrinkles baked on sim grid (13k cells, bilinear-sampled in render),
+  render at half res upscaled (cloth is blurry, invisible), per-pixel hypot→
+  sqrt, sheen pow→smoothstep, fiber-noise sin→integer hash.
+- Measured headless-CPU A/B with real dent: 5.7fps → 21.1fps. Added tiny fps
+  readout (corner) so on-device perf is verifiable by eye.
+
 ## v0.1.3 — 2026-10-07 — ClothLab realism pass (real algorithms)
 - Read Holocloth `cloth.ts` (Verlet + structural/shear/bend constraints,
   smoothstep multi-point grab, cavity AO, 120Hz substeps) and html-to-cloth

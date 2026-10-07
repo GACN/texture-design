@@ -76,6 +76,7 @@ const GX = 150, GY = 88, N = GX * GY;
 let hgt = new Float32Array(N), vel = new Float32Array(N);
 let press = new Float32Array(N); // analytic press shape: deterministic, added on top of free waves
 let comp = new Float32Array(N);  // compression = laplacian(hgt+press) clamped ≥0: drives wrinkles + cavity AO
+let wrx = new Float32Array(N), wry = new Float32Array(N); // buckle-wrinkle normal perturb, computed ON GRID (cheap) not per pixel
 // per-press randomness: no two finger presses make the same dent (breaks the "too uniform" look)
 let pressSeed = { phase: 0, rot: 0, aspect: 1 };
 const MATS = {
@@ -176,8 +177,30 @@ function step() {
     const avg = (hgt[i-1]+press[i-1] + hgt[i+1]+press[i+1] + hgt[i-GX]+press[i-GX] + hgt[i+GX]+press[i+GX]) * 0.25;
     comp[i] = Math.max(0, avg - tC);
   }
+  // buckle wrinkles ON GRID: ridges run across the local slope, amplitude grows
+  // with compression. Per-press phase seed => every dent wrinkles differently.
+  // Grid-level (13k cells) instead of per-pixel (480k px): ~36x cheaper, same look.
+  for (let gy = 1; gy < GY - 1; gy++) for (let gx = 1; gx <= GX - 2; gx++) {
+    const i = idx(gx, gy);
+    const tC = hgt[i] + press[i];
+    const gxRaw = ((hgt[i+1]+press[i+1]) - (hgt[i-1]+press[i-1])) / (2 * sx);
+    const gyRaw = ((hgt[i+GX]+press[i+GX]) - (hgt[i-GX]+press[i-GX])) / (2 * sy);
+    const slope = Math.hypot(gxRaw, gyRaw);
+    if (slope > 0.02) {
+      const perp = Math.atan2(gyRaw, gxRaw) + Math.PI / 2;
+      const cp = Math.cos(perp), sp = Math.sin(perp);
+      const sProj = (gx * sx) * cp + (gy * sy) * sp;
+      const ridge = Math.sin(sProj * M.wrinkleFreq * 2.2 + pressSeed.phase + slope * 2.0);
+      const wamp = Math.min(1, comp[i] * 0.5 + slope * 0.25) * M.wrinkleAmp * 1.4;
+      wrx[i] = cp * ridge * wamp; wry[i] = sp * ridge * wamp;
+    } else { wrx[i] = 0; wry[i] = 0; }
+  }
 }
-const img = ctx.createImageData(W, H);
+const RW = 450, RH = 267; // render at half res, upscale to display: cloth is blurry, 4x fewer pixels
+const off = document.createElement('canvas'); off.width = RW; off.height = RH;
+const octx = off.getContext('2d');
+const img = octx.createImageData(RW, RH);
+const RS = W / RW; // pixel scale render->sim
 function render() {
   const d = img.data;
   const sx = W / GX, sy = H / GY;
@@ -185,10 +208,12 @@ function render() {
   // (light-follows-pointer killed dent readability — one wall lit, one dark needs a fixed sun.)
   const ll = Math.hypot(0.45, 0.55, 1);
   const Lx = -0.45 / ll, Ly = -0.55 / ll, Lz = 1 / ll;
-  for (let y = 0; y < H; y++) {
-    const gy = Math.min(GY - 2, y / sy), gy0 = Math.floor(gy), fy = gy - gy0;
-    for (let x = 0; x < W; x++) {
-      const gx = Math.min(GX - 2, x / sx), gx0 = Math.floor(gx), fx = gx - gx0;
+  for (let y = 0; y < RH; y++) {
+    const Y = y * RS;
+    const gy = Math.min(GY - 2, Y / sy), gy0 = Math.floor(gy), fy = gy - gy0;
+    for (let x = 0; x < RW; x++) {
+      const X = x * RS;
+      const gx = Math.min(GX - 2, X / sx), gx0 = Math.floor(gx), fx = gx - gx0;
       const i00 = idx(gx0, gy0);
       // bilinear height: free waves + analytic press dent
       const h00 = hgt[i00]+press[i00], h10 = hgt[i00+1]+press[i00+1], h01 = hgt[i00+GX]+press[i00+GX], h11 = hgt[i00+GX+1]+press[i00+GX+1];
@@ -200,30 +225,24 @@ function render() {
       const rawx = ((h10 - h00) * (1 - fy) + (h11 - h01) * fy) / sx;
       const rawy = ((h01 - h00) * (1 - fx) + (h11 - h10) * fx) / sy;
       let dzdx = rawx * 5.0, dzdy = rawy * 5.0;
-      // buckle wrinkles: ridges run across the local slope (folds align against the
-      // push), amplitude grows with compression — this is what breaks the perfect
-      // gaussian look. Phase seeded per press so every dent wrinkles differently.
-      const slope = Math.hypot(rawx, rawy);
-      if (slope > 0.02) {
-        const perp = Math.atan2(rawy, rawx) + Math.PI / 2;
-        const cp = Math.cos(perp), sp = Math.sin(perp);
-        const sProj = x * cp + y * sp;
-        const ridge = Math.sin(sProj * M.wrinkleFreq * 2.2 + pressSeed.phase + slope * 2.0);
-        const wamp = Math.min(1, cf * 0.5 + slope * 0.25) * M.wrinkleAmp;
-        dzdx += cp * ridge * wamp * 1.4;
-        dzdy += sp * ridge * wamp * 1.4;
-      }
-      const inv = 1 / Math.hypot(dzdx, dzdy, 1);
+      // grid-baked wrinkles: just bilinear-sample, zero trig per pixel
+      const w00x = wrx[i00], w10x = wrx[i00+1], w01x = wrx[i00+GX], w11x = wrx[i00+GX+1];
+      const w00y = wry[i00], w10y = wry[i00+1], w01y = wry[i00+GX], w11y = wry[i00+GX+1];
+      dzdx += (w00x*(1-fx)*(1-fy) + w10x*fx*(1-fy) + w01x*(1-fx)*fy + w11x*fx*fy);
+      dzdy += (w00y*(1-fx)*(1-fy) + w10y*fx*(1-fy) + w01y*(1-fx)*fy + w11y*fx*fy);
+      const inv = 1 / Math.sqrt(dzdx * dzdx + dzdy * dzdy + 1);
       const nx = -dzdx * inv, ny = -dzdy * inv, nz = inv;
       const dif = Math.max(0, nx * Lx + ny * Ly + nz * Lz);
-      // anisotropic-ish sheen: vertical streak highlight
-      const sheen = Math.pow(Math.max(0, 1 - Math.abs(nx * 0.9 + ny * 0.15)), 8 + M.aniso * 40) * M.sheen;
+      // sheen via smoothstep (no per-pixel pow): vertical streak highlight
+      const sa = 1 - Math.abs(nx * 0.9 + ny * 0.15);
+      const sheen = sa * sa * (3 - 2 * sa) * M.sheen;
       // weave sampled at UVs warped by the height gradient: threads bunch on dent
       // walls and smear along drags — the texture is IN the cloth, not on the screen.
       const shx = Math.max(-14, Math.min(14, -rawx * 10)), shy = Math.max(-14, Math.min(14, -rawy * 10));
-      const wxp = x + shx, wyp = y + shy;
+      const wxp = X + shx, wyp = Y + shy;
       const wv = weaveTile[((wyp >> 0) % tile + tile) % tile * tile + (((wxp >> 0) % tile + tile) % tile)];
-      const nz2 = ((Math.sin(wxp * 12.9898 + wyp * 78.233) * 43758.5453) % 1) * 0.06;
+      // cheap fiber hash (no per-pixel sin): ±0.03 grain keeps threads from banding
+      const nz2 = ((((wxp >> 0) * 73 + (wyp >> 0) * 149) % 64) / 64 - 0.5) * 0.12;
       const onWarp = ((wxp >> 0) + (wyp >> 0)) % 2 === 0;
       const base = onWarp ? M.warp : M.weft;
       // cavity AO (Holocloth): folds darken by compression, not by raw depth —
@@ -231,14 +250,16 @@ function render() {
       const hCl = Math.max(-0.25, Math.min(0.2, h * 0.008));
       const ao = (1 - Math.min(0.55, cf * M.cavityGain)) * (1 + hCl);
       const li = (0.38 + 0.62 * dif + sheen) * (wv + nz2) * ao;
-      const o = (y * W + x) * 4;
+      const o = (y * RW + x) * 4;
       d[o] = Math.min(255, base[0] * li * 1.25);
       d[o+1] = Math.min(255, base[1] * li * 1.25);
       d[o+2] = Math.min(255, base[2] * li * 1.25);
       d[o+3] = 255;
     }
   }
-  ctx.putImageData(img, 0, 0);
+  octx.putImageData(img, 0, 0);
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(off, 0, 0, W, H); // upscale half-res render to display
   // tension ring at press point: radius grows with dwell, stretches into an
   // ellipse along drag direction so pulls read as pulls, not button taps
   if (ptr.down) {
@@ -260,11 +281,16 @@ function render() {
     ctx.restore();
   }
 }
-let frames = 0;
+let frames = 0, fpsT = performance.now(), fps = 0;
 function loop() {
   if (!reduced) { step(); render(); }
   else if (frames === 0) { render(); }
   frames++;
+  const now = performance.now();
+  if (now - fpsT >= 1000) { fps = Math.round(frames * 1000 / (now - fpsT)); frames = 0; fpsT = now; }
+  // fps readout (tiny, corner): proves the perf fix on-device
+  ctx.save(); ctx.fillStyle = 'rgba(242,236,225,.55)'; ctx.font = '12px monospace';
+  ctx.fillText(fps + ' fps', 10, H - 10); ctx.restore();
   requestAnimationFrame(loop);
 }
 // warm start: a gentle ripple so first paint isn't flat
